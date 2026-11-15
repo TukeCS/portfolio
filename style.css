@@ -170,3 +170,5 @@ kbd {
   .nav { margin-top: -16px; }
   .project { grid-template-columns: 1fr; gap: 12px; }
 }
+.project:not(:has(.thumb)) { grid-template-columns: 1fr; }
+.project-links .muted { font-size: 0.8rem; }
