@@ -13,7 +13,8 @@ const emptyEl = $("empty");
 const TAGS = 9;
 const BAR_H = 22;
 const PASSWORD = "trwm";
-const LAYOUTS = { tile: "[]=", bstack: "TTT", grid: "###", deck: "[D]", monocle: "[M]" };
+const LAYOUTS = { spiral: "S", dwindle: "D", tile: "[]=", bstack: "TTT", grid: "###", deck: "[D]", monocle: "[M]" };
+const SPLIT = new Set(["spiral", "dwindle"]);
 const LAYOUT_NAMES = Object.keys(LAYOUTS);
 
 const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -25,7 +26,7 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const DEFAULT_CONFIG = `-- trwm config: edit me, it reloads as you type.
 -- Try a typo to see how errors are handled.
 
-trwm.layout    = "tile"   -- tile bstack grid deck monocle
+trwm.layout    = "spiral" -- spiral dwindle tile bstack grid deck monocle
 trwm.gaps      = 8
 trwm.smartgaps = true
 trwm.border    = 2
@@ -40,7 +41,7 @@ trwm.wallpaper = "#15111f"
 `;
 
 const OPTIONS = {
-  layout: { type: "string", oneOf: LAYOUT_NAMES, def: "tile" },
+  layout: { type: "string", oneOf: LAYOUT_NAMES, def: "spiral" },
   gaps: { type: "number", min: 0, max: 40, def: 8 },
   smartgaps: { type: "boolean", def: true },
   border: { type: "number", min: 0, max: 8, def: 2 },
@@ -92,7 +93,8 @@ const S = {
   cfg: parseConfig(DEFAULT_CONFIG).cfg,
   configText: DEFAULT_CONFIG,
   error: null,
-  layout: "tile",
+  layout: "spiral",
+  prevLayout: "dwindle",
   gaps: 8,
   mfact: 0.55,
   nmaster: 1,
@@ -100,6 +102,8 @@ const S = {
   prevTag: 0,
   clients: [], // stacking/tiling order, like dwm's client list
   focus: Array(TAGS).fill(null),
+  trees: Array(TAGS).fill(null), // split tree per tag for spiral / dwindle
+  pointer: null, // last mouse position inside the screen
   nextId: 1,
   mode: "normal", // normal | launcher | lock | help | msg
 };
@@ -207,7 +211,7 @@ function setFocus(c) {
 
 function spawn(prog, animate = true) {
   if (visible().length >= 10) return flashTitle("too many windows on this tag");
-  const c = { id: S.nextId++, prog, tag: S.tag, floating: false, fs: false };
+  const c = { id: S.nextId++, prog, tag: S.tag, floating: false, fs: false, splitOf: focused()?.id ?? null };
   S.clients.unshift(c); // new clients go to the top of the stack, like dwm
   setFocus(c);
   render(animate ? c.id : null);
@@ -243,6 +247,13 @@ function zoom() {
   const c = focused();
   const tiled = tiledOf(visible());
   if (!c || c.floating || tiled.length < 2) return;
+  if (SPLIT.has(S.layout)) {
+    // split layouts: swap places with the first window in the tree
+    const t = S.trees[S.tag];
+    const first = t && leaves(t)[0];
+    if (t && first !== c.id) swapLeaves(t, c.id, first);
+    return render();
+  }
   const target = c === tiled[0] ? tiled[1] : c;
   moveToFront(target);
   setFocus(target);
@@ -281,6 +292,7 @@ function moveToTag(n) {
   const c = focused();
   if (!c || n === S.tag) return;
   c.tag = n;
+  c.splitOf = S.focus[n];
   S.focus[n] = c.id;
   const rest = visible();
   S.focus[S.tag] = rest[0]?.id ?? null;
@@ -288,7 +300,22 @@ function moveToTag(n) {
 }
 
 function setLayout(name) {
+  if (name !== S.layout) S.prevLayout = S.layout;
   S.layout = name;
+  render();
+}
+
+const toggleLayout = (a, b) => setLayout(S.layout === a ? b : a);
+
+// Mod+h / Mod+l: master size in dwm layouts, the split next to the window in split layouts
+function resizeMaster(d) {
+  const t = S.trees[S.tag];
+  const c = focused();
+  if (SPLIT.has(S.layout)) {
+    if (t && c) resizeLeaf(t, c.id, d);
+  } else {
+    S.mfact = clamp(S.mfact + d, 0.1, 0.9);
+  }
   render();
 }
 
@@ -314,6 +341,106 @@ function split(x, y, w, h, k, vertical, g) {
     }
   }
   return out;
+}
+
+// ---- split tree (a port of trwm's src/bsp.rs)
+// A node is { leaf: id } or { ratio, a, b }.
+
+function leaves(n, out = []) {
+  if (n.leaf != null) out.push(n.leaf);
+  else { leaves(n.a, out); leaves(n.b, out); }
+  return out;
+}
+
+function depthOf(n, id) {
+  if (n.leaf != null) return n.leaf === id ? 0 : null;
+  const d = depthOf(n.a, id) ?? depthOf(n.b, id);
+  return d == null ? null : d + 1;
+}
+
+function insertLeaf(n, target, id, first) {
+  if (n.leaf != null) {
+    if (n.leaf !== target) return false;
+    const [a, b] = first ? [id, target] : [target, id];
+    delete n.leaf;
+    Object.assign(n, { ratio: 0.5, a: { leaf: a }, b: { leaf: b } });
+    return true;
+  }
+  return insertLeaf(n.a, target, id, first) || insertLeaf(n.b, target, id, first);
+}
+
+// Remove a window; its sibling takes over the parent's space.
+function removeLeaf(n, id) {
+  if (n.leaf != null) return n.leaf === id ? null : n;
+  const a = removeLeaf(n.a, id), b = removeLeaf(n.b, id);
+  if (a && b) { n.a = a; n.b = b; return n; }
+  return a || b;
+}
+
+function swapLeaves(n, x, y) {
+  if (n.leaf != null) n.leaf = n.leaf === x ? y : n.leaf === y ? x : n.leaf;
+  else { swapLeaves(n.a, x, y); swapLeaves(n.b, x, y); }
+}
+
+function resizeLeaf(n, id, d) {
+  if (n.leaf != null) return false;
+  if (resizeLeaf(n.a, id, d) || resizeLeaf(n.b, id, d)) return true; // deepest split wins
+  const inA = n.a.leaf === id, inB = n.b.leaf === id;
+  if (!inA && !inB) return false;
+  n.ratio = clamp(n.ratio + (inA ? d : -d), 0.1, 0.9);
+  return true;
+}
+
+// spiral: splits alternate side by side / top and bottom with depth;
+// dwindle: wide spaces split side by side, tall ones top/bottom.
+function layoutTree(n, [x, y, w, h], g, spiral, depth = 0, out = new Map()) {
+  if (n.leaf != null) { out.set(n.leaf, [x, y, w, h]); return out; }
+  if (spiral ? depth % 2 === 0 : w >= h) {
+    const f = (w - g) * n.ratio;
+    layoutTree(n.a, [x, y, f, h], g, spiral, depth + 1, out);
+    layoutTree(n.b, [x + f + g, y, w - f - g, h], g, spiral, depth + 1, out);
+  } else {
+    const f = (h - g) * n.ratio;
+    layoutTree(n.a, [x, y, w, f], g, spiral, depth + 1, out);
+    layoutTree(n.b, [x, y + f + g, w, h - f - g], g, spiral, depth + 1, out);
+  }
+  return out;
+}
+
+// Bring the tag's tree in line with its tiled windows, then lay it out.
+// New windows split the window under the mouse (or the one that had focus),
+// like trwm: spiral puts them right, bottom, left, top, ...; dwindle uses
+// the half of the window the mouse is on.
+function arrangeSplit(tiled, a) {
+  const g = S.cfg.smartgaps && tiled.length === 1 ? 0 : S.gaps;
+  const area = [a.x + g, a.y + g, a.w - 2 * g, a.h - 2 * g];
+  const spiral = S.layout === "spiral";
+  const ids = new Set(tiled.map(c => c.id));
+  let t = S.trees[S.tag];
+  if (t) for (const id of leaves(t)) if (!ids.has(id)) t = removeLeaf(t, id);
+
+  const old = t ? layoutTree(t, area, g, spiral) : new Map();
+  const under = S.pointer && [...old].find(([, [x, y, w, h]]) =>
+    S.pointer.x >= x && S.pointer.x < x + w && S.pointer.y >= y && S.pointer.y < y + h);
+
+  for (const c of [...tiled].reverse()) { // oldest first
+    if (!t) { t = { leaf: c.id }; continue; }
+    const have = leaves(t);
+    if (have.includes(c.id)) continue;
+    const target = under && old.has(under[0]) ? under[0]
+      : have.includes(c.splitOf) ? c.splitOf : have[have.length - 1];
+    let first = false;
+    if (spiral) first = depthOf(t, target) % 4 >= 2;
+    else if (under && under[0] === target) {
+      const [x, y, w, h] = under[1];
+      first = w >= h ? S.pointer.x < x + w / 2 : S.pointer.y < y + h / 2;
+    }
+    insertLeaf(t, target, c.id, first);
+  }
+  S.trees[S.tag] = t;
+  if (!t) return [];
+  const rects = layoutTree(t, area, g, spiral);
+  return tiled.map(c => rects.get(c.id));
 }
 
 function arrange(name, n, a) {
@@ -388,7 +515,7 @@ function render(newId = null) {
   const vis = visible();
   const f = focused();
   const tiled = tiledOf(vis);
-  const rects = arrange(S.layout, tiled.length, a);
+  const rects = SPLIT.has(S.layout) ? arrangeSplit(tiled, a) : arrange(S.layout, tiled.length, a);
   const nm = Math.min(S.nmaster, tiled.length);
 
   let monocleShown = null, deckShown = null;
@@ -614,11 +741,13 @@ const KEYS = [
   ["Enter", "open a terminal"],
   ["p", "launcher (rofi)"],
   ["j / k", "focus next / previous"],
-  ["z", "swap with master"],
-  ["h / l", "shrink / grow master"],
+  ["z", "swap with master / first window"],
+  ["h / l", "shrink / grow master or split"],
   ["i / d", "more / fewer masters"],
+  ["r", "spiral ↔ dwindle (split layouts)"],
   ["t b g e m", "tile, bstack, grid, deck, monocle"],
-  ["space", "next layout"],
+  ["space", "previous layout"],
+  ["n", "next layout"],
   ["f", "toggle floating"],
   ["F", "toggle fullscreen"],
   ["1 – 9", "view tag"],
@@ -629,6 +758,7 @@ const KEYS = [
   ["R", "restart trwm in place"],
   ["Q", "quit trwm"],
   ["?", "show these keys"],
+  ["mouse", "new windows split the window under it"],
   ["drag title", "move (window floats, snaps to edges)"],
   ["drag corner", "resize a floating window"],
 ];
@@ -674,6 +804,7 @@ function quit() {
     els.clear();
     S.clients = [];
     S.focus.fill(null);
+    S.trees.fill(null);
     S.tag = 0;
     reloadConfig(S.configText, true);
   });
@@ -702,8 +833,10 @@ function handleKey(e) {
     case "c": case "C": kill(); break;
     case "j": focusDir(1); break;
     case "k": focusDir(-1); break;
-    case "h": S.mfact = clamp(S.mfact - 0.05, 0.1, 0.9); render(); break;
-    case "l": S.mfact = clamp(S.mfact + 0.05, 0.1, 0.9); render(); break;
+    case "h": resizeMaster(-0.05); break;
+    case "l": resizeMaster(0.05); break;
+    case "r": toggleLayout("spiral", "dwindle"); break;
+    case "n": cycleLayout(); break;
     case "i": S.nmaster = Math.min(5, S.nmaster + 1); render(); break;
     case "d": S.nmaster = Math.max(0, S.nmaster - 1); render(); break;
     case "z": zoom(); break;
@@ -712,7 +845,7 @@ function handleKey(e) {
     case "g": setLayout("grid"); break;
     case "e": setLayout("deck"); break;
     case "m": setLayout("monocle"); break;
-    case " ": e.shiftKey ? toggleFloat() : cycleLayout(); break;
+    case " ": e.shiftKey ? toggleFloat() : setLayout(S.prevLayout); break;
     case "f": toggleFloat(); break;
     case "F": toggleFullscreen(); break;
     case "=": case "+": S.gaps = Math.min(40, S.gaps + 2); render(); break;
@@ -732,6 +865,12 @@ wm.addEventListener("keydown", e => {
 wm.addEventListener("pointerdown", () => {
   if (S.mode !== "launcher") wm.focus({ preventScroll: true });
 });
+wm.addEventListener("pointermove", e => {
+  if (e.pointerType !== "mouse") return;
+  const r = wm.getBoundingClientRect();
+  S.pointer = { x: e.clientX - r.left, y: e.clientY - r.top };
+});
+wm.addEventListener("pointerleave", () => { S.pointer = null; });
 
 // On-screen buttons for touch devices
 $("touch-keys").addEventListener("click", e => {
@@ -771,6 +910,7 @@ function reloadConfig(text, quiet = false) {
   S.cfg = c;
   S.error = null;
   S.configText = text;
+  if (c.layout !== S.layout) S.prevLayout = S.layout;
   S.layout = c.layout;
   S.gaps = c.gaps;
   S.mfact = c.mfact;
