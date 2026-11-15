@@ -50,9 +50,9 @@
     <section>
       <h2 class="h2-row">Featured project <a href="projects.html">all projects →</a></h2>
       <article class="featured">
-        <a href="https://github.com/TukeCS/trwm" target="_blank" rel="noopener" class="shot">
-          <img src="https://raw.githubusercontent.com/TukeCS/trwm/main/screenshot.png"
-               alt="trwm running: bar with tags and status, two terminals tiled with gaps">
+        <a href="demos/trwm/index.html" class="shot">
+          <img src="images/trwm-demo-large.webp" width="960" height="600"
+               alt="trwm opening terminals in the spiral layout, each new window splitting the one before it">
         </a>
         <div class="featured-body">
           <h3><a href="https://github.com/TukeCS/trwm" target="_blank" rel="noopener">trwm</a></h3>
@@ -62,6 +62,7 @@
             It ships its own status bar and screen locker, and is configured in Lua with hot reload.
           </p>
           <ul class="features">
+            <li>Hyprland-style spiral and dwindle split layouts: new windows split the one under the cursor</li>
             <li>dwm-style tags, master/stack, monocle, bstack, grid and deck layouts</li>
             <li>Built-in status bar reading straight from <code>/proc</code> and <code>/sys</code></li>
             <li>PAM screen locker with idle auto-lock and DPMS</li>
@@ -73,6 +74,10 @@
             <button type="button" class="copy" data-copy="cargo install --git https://github.com/TukeCS/trwm">copy</button>
           </div>
           <p class="tags"><span>Rust</span><span>Lua</span><span>X11</span></p>
+          <p class="project-links">
+            <a href="https://github.com/TukeCS/trwm" target="_blank" rel="noopener">source</a>
+            <a href="demos/trwm/index.html">live demo</a>
+          </p>
         </div>
       </article>
     </section>

@@ -408,9 +408,8 @@ function layoutTree(n, [x, y, w, h], g, spiral, depth = 0, out = new Map()) {
 }
 
 // Bring the tag's tree in line with its tiled windows, then lay it out.
-// New windows split the window under the mouse (or the one that had focus),
-// like trwm: spiral puts them right, bottom, left, top, ...; dwindle uses
-// the half of the window the mouse is on.
+// New windows split the focused window: spiral puts them right, bottom,
+// left, top, ...; dwindle uses the half of the window the mouse is on.
 function arrangeSplit(tiled, a) {
   const g = S.cfg.smartgaps && tiled.length === 1 ? 0 : S.gaps;
   const area = [a.x + g, a.y + g, a.w - 2 * g, a.h - 2 * g];
@@ -420,20 +419,19 @@ function arrangeSplit(tiled, a) {
   if (t) for (const id of leaves(t)) if (!ids.has(id)) t = removeLeaf(t, id);
 
   const old = t ? layoutTree(t, area, g, spiral) : new Map();
-  const under = S.pointer && [...old].find(([, [x, y, w, h]]) =>
-    S.pointer.x >= x && S.pointer.x < x + w && S.pointer.y >= y && S.pointer.y < y + h);
 
   for (const c of [...tiled].reverse()) { // oldest first
     if (!t) { t = { leaf: c.id }; continue; }
     const have = leaves(t);
     if (have.includes(c.id)) continue;
-    const target = under && old.has(under[0]) ? under[0]
-      : have.includes(c.splitOf) ? c.splitOf : have[have.length - 1];
+    // split the window that had focus (with focus following the mouse,
+    // that's the one under the cursor, as in trwm)
+    const target = have.includes(c.splitOf) ? c.splitOf : have[have.length - 1];
     let first = false;
+    const r = old.get(target), p = S.pointer;
     if (spiral) first = depthOf(t, target) % 4 >= 2;
-    else if (under && under[0] === target) {
-      const [x, y, w, h] = under[1];
-      first = w >= h ? S.pointer.x < x + w / 2 : S.pointer.y < y + h / 2;
+    else if (r && p && p.x >= r[0] && p.x < r[0] + r[2] && p.y >= r[1] && p.y < r[1] + r[3]) {
+      first = r[2] >= r[3] ? p.x < r[0] + r[2] / 2 : p.y < r[1] + r[3] / 2; // the half the mouse is on
     }
     insertLeaf(t, target, c.id, first);
   }
@@ -758,7 +756,7 @@ const KEYS = [
   ["R", "restart trwm in place"],
   ["Q", "quit trwm"],
   ["?", "show these keys"],
-  ["mouse", "new windows split the window under it"],
+  ["hover", "focus the window (new windows split it)"],
   ["drag title", "move (window floats, snaps to edges)"],
   ["drag corner", "resize a floating window"],
 ];
@@ -865,10 +863,22 @@ wm.addEventListener("keydown", e => {
 wm.addEventListener("pointerdown", () => {
   if (S.mode !== "launcher") wm.focus({ preventScroll: true });
 });
+// Focus follows the mouse, like trwm's focus_follows_mouse. Only real mouse
+// movement counts: windows sliding under a still cursor don't steal focus,
+// so opening several windows from the keyboard keeps spiralling inwards.
 wm.addEventListener("pointermove", e => {
   if (e.pointerType !== "mouse") return;
   const r = wm.getBoundingClientRect();
-  S.pointer = { x: e.clientX - r.left, y: e.clientY - r.top };
+  const p = { x: e.clientX - r.left, y: e.clientY - r.top };
+  const moved = !S.pointer || Math.hypot(p.x - S.pointer.x, p.y - S.pointer.y) > 2;
+  S.pointer = p;
+  if (!moved || S.mode !== "normal" || e.buttons || wm.classList.contains("dragging")) return;
+  const el = document.elementFromPoint(e.clientX, e.clientY)?.closest(".win");
+  const c = el && S.clients.find(cl => els.get(cl.id) === el);
+  if (c && c.id !== focused()?.id) {
+    setFocus(c);
+    render();
+  }
 });
 wm.addEventListener("pointerleave", () => { S.pointer = null; });
 
