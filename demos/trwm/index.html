@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>trwm demo · Tuke</title>
+  <meta name="description" content="Live in-browser demo of trwm, a tiling window manager written in Rust.">
+  <link rel="icon" href="https://avatars.githubusercontent.com/u/75539193?v=4">
+  <link rel="stylesheet" href="../../style.css">
+  <link rel="stylesheet" href="demo.css">
+</head>
+<body>
+  <main class="wrap wide">
+    <nav class="nav">
+      <a href="../../index.html">home</a>
+      <a href="../../projects.html" aria-current="page">projects</a>
+    </nav>
+
+    <header class="demo-head">
+      <div>
+        <h1>trwm <span class="muted">live demo</span></h1>
+        <p class="muted">
+          A browser mock-up of <a href="https://github.com/TukeCS/trwm" target="_blank" rel="noopener">trwm</a>.
+          Click the screen and use the keys. Edit the config on the right and it reloads as you type, like the real one.
+        </p>
+      </div>
+      <button type="button" class="btn" id="fullscreen">fullscreen</button>
+    </header>
+
+    <div class="demo-grid">
+      <div class="wm-frame" id="frame">
+        <div class="wm loading" id="wm" tabindex="0" aria-label="trwm demo screen. Click, then use the keyboard.">
+          <div class="bar" id="bar">
+            <div class="bar-tags" id="tags"></div>
+            <span class="bar-layout" id="layout"></span>
+            <span class="bar-title" id="title"></span>
+            <span class="bar-status" id="status"></span>
+          </div>
+          <div class="empty" id="empty"><div>empty tag<br><kbd>Enter</kbd> terminal · <kbd>p</kbd> launcher · <kbd>?</kbd> keys</div></div>
+
+          <div class="overlay launcher" id="launcher" hidden>
+            <input id="launcher-input" placeholder="run…" autocomplete="off" spellcheck="false">
+            <ul id="launcher-list"></ul>
+          </div>
+
+          <div class="overlay lock" id="lock" hidden>
+            <div class="lock-clock" id="lock-clock"></div>
+            <div class="lock-hint">screen locked · the password is <b>trwm</b> · Enter to unlock</div>
+          </div>
+
+          <div class="overlay help" id="help" hidden>
+            <div class="help-box">
+              <div class="help-title">trwm keys <span>(any key to close)</span></div>
+              <div class="help-cols" id="help-keys"></div>
+            </div>
+          </div>
+
+          <div class="overlay msg" id="msg" hidden></div>
+        </div>
+      </div>
+
+      <aside class="cfg">
+        <div class="cfg-head">
+          <span>~/.config/trwm/config.lua</span>
+          <button type="button" class="btn small" id="cfg-reset">reset</button>
+        </div>
+        <textarea id="cfg" wrap="off" spellcheck="false" autocomplete="off" aria-label="trwm config"></textarea>
+        <p class="cfg-status" id="cfg-status"></p>
+      </aside>
+    </div>
+
+    <div class="touch-keys" id="touch-keys">
+      <button type="button" data-key="Enter">terminal</button>
+      <button type="button" data-key="p">launcher</button>
+      <button type="button" data-key="j">focus</button>
+      <button type="button" data-key="z">master</button>
+      <button type="button" data-key=" ">layout</button>
+      <button type="button" data-key="f">float</button>
+      <button type="button" data-key="c">close</button>
+      <button type="button" data-key="L">lock</button>
+      <button type="button" data-key="?">keys</button>
+    </div>
+
+    <section>
+      <h2>Keys</h2>
+      <p class="muted small-note">
+        In trwm every key is held with <kbd>Mod</kbd> (Super). In the browser the OS usually grabs Super,
+        so here you can press the keys on their own once the screen is focused. <kbd>Alt</kbd> works as Mod too.
+      </p>
+      <div class="keys" id="keys"></div>
+    </section>
+
+    <footer class="muted">© 2026 Tuke · <a href="https://github.com/TukeCS/trwm" target="_blank" rel="noopener">source on GitHub</a></footer>
+  </main>
+  <script src="demo.js"></script>
+</body>
+</html>
