@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Scrab demo · Tuke</title>
+  <meta name="description" content="Scrab, a file searcher written in Rust with egui, compiled to WebAssembly.">
+  <link rel="icon" href="https://avatars.githubusercontent.com/u/75539193?v=4">
+  <link rel="stylesheet" href="../../style.css">
+  <style>
+    .wrap.wide { max-width: 900px; }
+    .demo-head p { margin: 6px 0 0; }
+    .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin: 20px 0 12px; font-size: 0.9rem; }
+    .btn {
+      font: 0.8rem var(--mono);
+      padding: 6px 12px;
+      color: var(--fg); background: var(--card);
+      border: 1px solid var(--line); border-radius: 6px;
+      cursor: pointer;
+    }
+    .btn:hover { border-color: var(--accent); color: var(--accent); }
+    #picker { display: none; }
+    .app {
+      position: relative;
+      height: min(560px, 75vh);
+      min-height: 400px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: hidden;
+      background: #1b1b1b;
+    }
+    .app canvas { display: block; width: 100%; height: 100%; outline: none; }
+    .loading {
+      position: absolute; inset: 0;
+      display: grid; place-items: center;
+      font: 0.85rem var(--mono); color: #8e8e95;
+      pointer-events: none;
+    }
+    .loading[hidden] { display: none; }
+    .notes { font-size: 0.92rem; }
+    .notes li { margin: 4px 0; }
+  </style>
+</head>
+<body>
+  <main class="wrap wide">
+    <nav class="nav">
+      <a href="../../index.html">home</a>
+      <a href="../../projects.html" aria-current="page">projects</a>
+    </nav>
+
+    <header class="demo-head">
+      <h1>Scrab <span class="muted" style="font-weight:400">live demo</span></h1>
+      <p class="muted">
+        <a href="https://github.com/TukeCS/Scrab" target="_blank" rel="noopener">Scrab</a> is a file searcher
+        written in Rust with egui. This is the real app, compiled to WebAssembly and running in your browser.
+      </p>
+    </header>
+
+    <div class="toolbar">
+      <button type="button" class="btn" id="pick">pick a folder to search</button>
+      <input type="file" id="picker" webkitdirectory multiple>
+      <span class="muted" id="source">Searching a built-in sample file tree. Try <code>rs</code>, <code>config</code> or <code>.png</code>.</span>
+    </div>
+
+    <div class="app">
+      <canvas id="scrab_canvas"></canvas>
+      <div class="loading" id="loading">loading Scrab (≈1 MB)…</div>
+    </div>
+
+    <section>
+      <h2>How the web version works</h2>
+      <ul class="notes">
+        <li>The UI and search code are the same Rust as the desktop app, built for <code>wasm32-unknown-unknown</code> with eframe's web runner.</li>
+        <li>A browser can't walk your disk, so the web build searches an in-memory list of paths instead of using <code>walkdir</code>.</li>
+        <li>If you pick a folder, only the file <em>names</em> are read. Nothing is uploaded and nothing leaves your browser.</li>
+      </ul>
+    </section>
+
+    <footer class="muted">© 2026 Tuke · <a href="https://github.com/TukeCS/Scrab" target="_blank" rel="noopener">source on GitHub</a></footer>
+  </main>
+
+  <script type="module">
+    import init, { set_files } from "./pkg/scrab.js";
+
+    const loading = document.getElementById("loading");
+    try {
+      await init();
+      loading.hidden = true;
+    } catch (e) {
+      loading.textContent = "Couldn't start Scrab here (it needs WebAssembly and WebGL).";
+      console.error(e);
+    }
+
+    const picker = document.getElementById("picker");
+    document.getElementById("pick").addEventListener("click", () => picker.click());
+    picker.addEventListener("change", () => {
+      const paths = [...picker.files].map(f => f.webkitRelativePath || f.name);
+      if (!paths.length) return;
+      const root = paths[0].split("/")[0];
+      set_files(paths, root);
+      document.getElementById("source").textContent =
+        `Searching ${paths.length.toLocaleString()} files in "${root}" (names only, nothing is uploaded).`;
+    });
+  </script>
+</body>
+</html>
