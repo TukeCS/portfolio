@@ -62,7 +62,7 @@
     </section>
 
     <section>
-      <h2 class="h2-row">Featured project <a href="projects.html">all projects →</a></h2>
+      <h2 class="h2-row">Featured projects <a href="projects.html">all projects →</a></h2>
       <article class="featured">
         <a href="demos/trwm/index.html" class="shot">
           <img src="images/trwm-demo-large.webp" width="960" height="600"
@@ -91,6 +91,38 @@
           <p class="project-links">
             <a href="https://github.com/TukeCS/trwm" target="_blank" rel="noopener">source</a>
             <a href="demos/trwm/index.html">live demo</a>
+          </p>
+        </div>
+      </article>
+
+      <article class="featured">
+        <a href="demos/weather_shark/index.html" class="shot">
+          <img src="images/weather-shark-large.webp" width="960" height="600" loading="lazy"
+               alt="weather_shark showing the 2013 Moore tornado supercell over Oklahoma City, with interstates, highway numbers and town names">
+        </a>
+        <div class="featured-body">
+          <h3><a href="https://github.com/TukeCS/weather_shark" target="_blank" rel="noopener">weather_shark</a></h3>
+          <p class="muted">tuke's tornado radar</p>
+          <p>
+            A NEXRAD radar viewer for tracking tornadoes, written in Rust with egui. It decodes raw Level II
+            radar data and runs both on the desktop and in the browser.
+          </p>
+          <ul class="features">
+            <li>Reflectivity, velocity and correlation coefficient in synced panes that split in a fibonacci spiral, like trwm</li>
+            <li>Chase map with roads, highway numbers and towns from OpenStreetMap vector tiles</li>
+            <li>Live NWS warnings and watches on the map, with a siren when a tornado is confirmed</li>
+            <li>NOAA Weather Radio streams from the transmitters nearest the radar</li>
+            <li>Lua config for colour tables, layout and alert sounds that applies on save, in the browser too</li>
+            <li>Live data or any past scan, with bookmarks like the 2013 Moore and El Reno tornadoes</li>
+          </ul>
+          <div class="install">
+            <pre><code>cargo install --git https://github.com/TukeCS/weather_shark</code></pre>
+            <button type="button" class="copy" data-copy="cargo install --git https://github.com/TukeCS/weather_shark">copy</button>
+          </div>
+          <p class="tags"><span>Rust</span><span>Lua</span><span>egui</span><span>WebAssembly</span></p>
+          <p class="project-links">
+            <a href="https://github.com/TukeCS/weather_shark" target="_blank" rel="noopener">source</a>
+            <a href="demos/weather_shark/index.html">live demo</a>
           </p>
         </div>
       </article>
