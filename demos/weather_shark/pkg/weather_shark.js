@@ -1663,6 +1663,9 @@ function __wbg_get_imports() {
         __wbg_stopPropagation_e4181c041abda4c3: function(arg0) {
             arg0.stopPropagation();
         },
+        __wbg_stop_1419220d10f38199: function() { return handleError(function (arg0) {
+            arg0.stop();
+        }, arguments); },
         __wbg_style_f499e599ac70277f: function(arg0) {
             const ret = arg0.style;
             return ret;
