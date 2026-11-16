@@ -69,7 +69,21 @@ code, pre { font-family: var(--mono); font-size: 0.85rem; }
 .skills dd { margin: 0; font-family: var(--mono); font-size: 0.9rem; }
 
 /* featured */
-.featured + .featured { margin-top: 24px; }
+/* featured projects: side by side, wider than the text column on big screens */
+.wide {
+  width: min(1080px, 100vw - 48px);
+  margin-left: calc(50% - min(540px, 50vw - 24px));
+}
+.featured-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.featured-grid .featured { display: flex; flex-direction: column; }
+.featured-grid .featured-body { flex: 1; display: flex; flex-direction: column; }
+.featured-grid .install { margin-top: auto; padding-top: 4px; }
+.featured-grid .install pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.featured-grid .install .copy { top: 10px; transform: none; }
+@media (max-width: 860px) {
+  .wide { width: auto; margin-left: 0; }
+  .featured-grid { grid-template-columns: 1fr; gap: 24px; }
+}
 .featured {
   background: var(--card);
   border: 1px solid var(--line);
