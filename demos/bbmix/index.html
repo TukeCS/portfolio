@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>bbmix demo · Tuke</title>
+  <meta name="description" content="bbmix, a mixer for the RME Babyface Pro on Linux written in Rust with egui, compiled to WebAssembly.">
+  <link rel="icon" href="https://avatars.githubusercontent.com/u/75539193">
+  <link rel="stylesheet" href="../../style.css">
+  <style>
+    .wrap.wide { max-width: 1280px; }
+    .demo-head p { margin: 6px 0 0; }
+    .app {
+      position: relative;
+      margin-top: 20px;
+      height: max(600px, min(1000px, 88vh));
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: hidden;
+      background: #111113;
+    }
+    .app canvas { display: block; width: 100%; height: 100%; outline: none; }
+    .loading {
+      position: absolute; inset: 0;
+      display: grid; place-items: center;
+      font: 0.85rem var(--mono); color: #8e8e95;
+      pointer-events: none;
+    }
+    .loading[hidden] { display: none; }
+    .notes { font-size: 0.92rem; }
+    .notes li { margin: 4px 0; }
+  </style>
+</head>
+<body>
+  <main class="wrap wide">
+    <nav class="nav">
+      <a href="../../index.html">home</a>
+      <a href="../../projects.html" aria-current="page">projects</a>
+    </nav>
+
+    <header class="demo-head">
+      <h1>bbmix <span class="muted" style="font-weight:400">live demo</span></h1>
+      <p class="muted">
+        <a href="https://github.com/TukeCS/bbmix" target="_blank" rel="noopener">bbmix</a> is a mixer for the
+        RME Babyface Pro / Pro FS on Linux, written in Rust with egui. This is the real UI, compiled to
+        WebAssembly and running in your browser.
+      </p>
+    </header>
+
+    <div class="app">
+      <canvas id="bbmix_canvas"></canvas>
+      <div class="loading" id="loading">loading bbmix…</div>
+    </div>
+
+    <section>
+      <h2>How the web version works</h2>
+      <ul class="notes">
+        <li>The UI and mixer model are the same Rust as the desktop app, built for <code>wasm32-unknown-unknown</code> with eframe's web runner.</li>
+        <li>A browser can't reach ALSA, so it runs like <code>bbmix --demo</code>: everything works, but no interface is touched.</li>
+        <li>Your mix is kept in your browser's local storage instead of <code>~/.config/bbmix/state.json</code>, so it's still there when you come back.</li>
+      </ul>
+    </section>
+
+    <footer class="muted">© 2026 Tuke · <a href="https://github.com/TukeCS/bbmix" target="_blank" rel="noopener">source on GitHub</a></footer>
+  </main>
+
+  <script type="module">
+    import init from "./pkg/bbmix.js";
+
+    const loading = document.getElementById("loading");
+    try {
+      await init();
+      loading.hidden = true;
+    } catch (e) {
+      loading.textContent = "Couldn't start bbmix here (it needs WebAssembly and WebGL).";
+      console.error(e);
+    }
+  </script>
+</body>
+</html>

@@ -41,6 +41,20 @@
         </div>
       </li>
       <li class="project">
+        <a class="thumb" href="demos/bbmix/index.html">
+          <img src="images/bbmix.webp" alt="bbmix mixing to the headphones: hardware inputs with mic preamps, software playback and hardware outputs, each with its own fader" loading="lazy">
+        </a>
+        <div class="project-body">
+          <h3><a href="https://github.com/TukeCS/bbmix" target="_blank" rel="noopener">bbmix</a></h3>
+          <p>A TotalMix-style mixer for the RME Babyface Pro / Pro FS on Linux, written in Rust with egui. RME never made Linux drivers, but the kernel exposes the Babyface's hardware mixer as ALSA controls, and bbmix is a front end for them: route every input and playback channel to any output, set preamp gain, 48V and pads, and link channels into stereo pairs. Your mix is saved and put back on the interface every time it connects.</p>
+          <p class="tags"><span>Rust</span><span>egui</span><span>ALSA</span><span>WebAssembly</span></p>
+          <p class="project-links">
+            <a href="https://github.com/TukeCS/bbmix" target="_blank" rel="noopener">source</a>
+            <a href="demos/bbmix/index.html">live demo</a>
+          </p>
+        </div>
+      </li>
+      <li class="project">
         <a class="thumb" href="demos/trwm/index.html">
           <img src="images/trwm-demo.webp" alt="trwm opening terminals in the spiral layout, each new window splitting the one before it" loading="lazy">
         </a>
